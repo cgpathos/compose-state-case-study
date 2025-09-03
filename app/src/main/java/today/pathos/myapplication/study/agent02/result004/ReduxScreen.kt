@@ -109,7 +109,7 @@ fun ReduxScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Redux Store Failed: ${screenUiState.error}")
+                        Text("Redux Store Failed: ${(screenUiState as ScreenUiState.Failed).error}")
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.loadItems() }) {
                             Text("Retry Redux Load")

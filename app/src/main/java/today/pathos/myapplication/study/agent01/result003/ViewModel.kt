@@ -3,7 +3,7 @@ package today.pathos.myapplication.study.agent01.result003
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +30,7 @@ class ViewModel : BaseViewModel() {
     val error: LiveData<String?> = _error
     
     // Transformation LiveData
-    val hasError: LiveData<Boolean> = Transformations.map(_error) { it != null }
+    val hasError: LiveData<Boolean> = _error.map { it != null }
     
     val isEmpty: LiveData<Boolean> = MediatorLiveData<Boolean>().apply {
         addSource(_items) { items -> value = combineEmptyState(items, _isLoading.value, _error.value) }

@@ -50,7 +50,7 @@ fun Agent04Result001Screen() {
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Error: ${screenState.error}")
+                    Text("Error: ${(screenState as ScreenUiState.Failed).error}")
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = {
                         screenState = ScreenUiState.Initializing

@@ -30,7 +30,7 @@ class RxJavaViewModel : BaseViewModel() {
     // RxJava Subjects for reactive state management
     private val itemsSubject = BehaviorSubject.createDefault<List<Item>>(emptyList())
     private val loadingSubject = BehaviorSubject.createDefault(false)
-    private val errorSubject = BehaviorSubject.createDefault<String?>(null)
+    private val errorSubject = BehaviorSubject.create<String?>()
     
     // Operation triggers
     private val refreshTrigger = PublishSubject.create<Unit>()

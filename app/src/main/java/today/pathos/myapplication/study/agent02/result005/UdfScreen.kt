@@ -147,7 +147,7 @@ fun UdfScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("UDF Failed: ${screenUiState.error}")
+                            Text("UDF Failed: ${(screenUiState as ScreenUiState.Failed).error}")
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(onClick = { viewModel.handleEvent(UdfEvent.RetryLoad) }) {
                                 Text("Retry UDF Load")

@@ -2,9 +2,11 @@ package today.pathos.myapplication.study.agent05.result002
 
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import today.pathos.myapplication.study.common.BaseViewModel
 import today.pathos.myapplication.study.common.Item
@@ -31,14 +33,23 @@ class Agent05ViewModel(
         stateHolder.items,
         stateHolder.isLoading,
         stateHolder.error
-    ) { screenState, items, isLoading, error ->
+    ) { screenState: ScreenUiState, items: List<Item>, isLoading: Boolean, error: String? ->
         Agent05UiState(
             screenState = screenState,
             items = items,
             isLoading = isLoading,
             error = error
         )
-    }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = Agent05UiState(
+            screenState = ScreenUiState.Initializing,
+            items = emptyList(),
+            isLoading = false,
+            error = null
+        )
+    )
     
     init {
         loadInitialItems()

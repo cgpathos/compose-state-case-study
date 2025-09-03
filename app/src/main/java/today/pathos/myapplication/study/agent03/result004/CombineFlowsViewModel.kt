@@ -50,7 +50,14 @@ class CombineFlowsViewModel : BaseViewModel() {
         _lastOperationFlow,
         _operationCountFlow,
         _timestampFlow
-    ) { items, isLoading, error, lastOperation, operationCount, timestamp ->
+    ) { flows: Array<Any?> ->
+        val items = flows[0] as List<Item>
+        val isLoading = flows[1] as Boolean
+        val error = flows[2] as String?
+        val lastOperation = flows[3] as String?
+        val operationCount = flows[4] as Int
+        val timestamp = flows[5] as Long
+        
         val currentTime = System.currentTimeMillis()
         val isDataStale = (currentTime - timestamp) > 30000 // 30 seconds
         
@@ -96,7 +103,6 @@ class CombineFlowsViewModel : BaseViewModel() {
     
     init {
         setupFlowCombinations()
-        triggerInitialLoad()
     }
     
     private fun setupFlowCombinations() {

@@ -26,7 +26,7 @@ fun Screen(
 ) {
     val screenUiState by viewModel.screenUiState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,7 +38,7 @@ fun Screen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         when (screenUiState) {
             is ScreenUiState.Initializing -> {
                 Box(
@@ -52,7 +52,7 @@ fun Screen(
                     }
                 }
             }
-            
+
             is ScreenUiState.Failed -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -72,14 +72,14 @@ fun Screen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = screenUiState.error,
+                                text = (screenUiState as ScreenUiState.Failed).error,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
                 }
             }
-            
+
             is ScreenUiState.Succeed -> {
                 // Action buttons
                 Row(
@@ -94,9 +94,9 @@ fun Screen(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Add")
                     }
-                    
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    
+
                     Button(
                         onClick = { viewModel.refresh() },
                         modifier = Modifier.weight(1f)
@@ -106,9 +106,9 @@ fun Screen(
                         Text("Refresh")
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Content based on UI state
                 when (uiState) {
                     is UiState.Loading -> {
@@ -123,7 +123,7 @@ fun Screen(
                             }
                         }
                     }
-                    
+
                     is UiState.Error -> {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -138,7 +138,7 @@ fun Screen(
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Text(
-                                    text = uiState.message,
+                                    text = (uiState as UiState.Error).message,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -150,9 +150,9 @@ fun Screen(
                             }
                         }
                     }
-                    
+
                     is UiState.Success -> {
-                        if (uiState.items.isEmpty()) {
+                        if ((uiState as UiState.Success).items.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -164,7 +164,7 @@ fun Screen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(
-                                    items = uiState.items,
+                                    items = (uiState as UiState.Success).items,
                                     key = { it.id }
                                 ) { item ->
                                     ItemCard(
@@ -192,7 +192,7 @@ private fun ItemCard(
     onDelete: () -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
-    
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -213,9 +213,9 @@ private fun ItemCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Row {
                 IconButton(onClick = { showEditDialog = true }) {
                     Icon(Icons.Default.Edit, contentDescription = "Edit")
@@ -226,7 +226,7 @@ private fun ItemCard(
             }
         }
     }
-    
+
     if (showEditDialog) {
         EditItemDialog(
             item = item,
@@ -247,7 +247,7 @@ private fun EditItemDialog(
 ) {
     var title by remember { mutableStateOf(item.title) }
     var description by remember { mutableStateOf(item.description) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Item") },

@@ -92,7 +92,7 @@ fun Screen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = screenUiState.error,
+                                text = (screenUiState as ScreenUiState.Failed).error,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }

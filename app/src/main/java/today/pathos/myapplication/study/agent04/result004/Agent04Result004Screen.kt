@@ -25,7 +25,7 @@ fun Agent04Result004Screen(
         }
         is ScreenUiState.Failed -> {
             ErrorScreen(
-                error = viewModel.screenState.error,
+                error = (viewModel.screenState as ScreenUiState.Failed).error,
                 onRetry = viewModel::retry
             )
         }

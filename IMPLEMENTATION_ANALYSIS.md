@@ -1683,4 +1683,407 @@ class Agent05Result005ViewModel(
 
 이 문서는 25가지 서로 다른 상태 관리 패턴을 실제 코드와 함께 분석한 포괄적인 가이드입니다. 각 패턴은 특정 상황과 요구사항에 최적화되어 있으며, 실무에서 적절한 선택을 위한 기준을 제공합니다.
 
+# 📢 **추가 구현체: init{} 블록 없는 패턴들**
+
+## 🎯 init{} 블록 없는 10개 추가 구현체
+
+기존 25개 구현체에 추가로 **각 Agent별 2개씩 총 10개**의 init{} 블록을 사용하지 않는 구현체를 생성했습니다. 총 **35개 구현체**가 완성되었습니다.
+
+### Agent01: State Management 전문 (+2개)
+
+#### **Result006: Lazy Initialization Pattern**
+```kotlin
+// LazyInitViewModel.kt - onStart에서 첫 구독 시 초기화
+class LazyInitViewModel : BaseViewModel() {
+    val uiState: StateFlow<LazyInitUiState> = _uiState.asStateFlow()
+        .onStart { 
+            if (!_uiState.value.isInitialized) {
+                initializeIfNeeded()
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily, // Lazy 시작
+            initialValue = LazyInitUiState()
+        )
+    
+    fun manualInitialize() {
+        viewModelScope.launch {
+            initializeIfNeeded()
+        }
+    }
+}
+```
+
+**핵심 특징:**
+- **지연 초기화**: 첫 구독 시점에 onStart로 초기화
+- **수동 제어**: manualInitialize() 함수로 명시적 초기화
+- **Lazy SharedIn**: SharingStarted.Lazily로 필요시에만 시작
+- **상태 추적**: isInitialized 플래그로 중복 초기화 방지
+
+#### **Result007: Factory Method Pattern**
+```kotlin
+// FactoryViewModel.kt - 팩토리 메서드로 상태 생성
+class FactoryViewModel : BaseViewModel() {
+    private fun createStateBasedOnCondition(
+        items: List<Item>? = null,
+        error: String? = null,
+        isLoading: Boolean = false
+    ): FactoryUiState {
+        return when {
+            error != null -> FactoryUiState.createErrorState(error)
+            isLoading -> FactoryUiState.createLoadingState()
+            items != null -> FactoryUiState.createSuccessState(items)
+            else -> FactoryUiState.createInitialState()
+        }
+    }
+    
+    fun initialize() { // 수동 초기화
+        viewModelScope.launch {
+            _uiState.value = FactoryUiState.createLoadingState()
+            // 초기화 로직...
+        }
+    }
+}
+```
+
+**핵심 특징:**
+- **팩토리 패턴**: 조건에 따른 상태 팩토리 메서드
+- **전략적 생성**: createErrorState, createSuccessState 등 상황별 생성
+- **수동 트리거**: initialize() 함수로 명시적 시작
+- **유연한 생성**: ItemCreationStrategy enum으로 아이템 생성 전략
+
+### Agent02: Architecture Pattern 전문 (+2개)
+
+#### **Result006: Command Pattern**
+```kotlin
+// CommandInvoker.kt - 명령 큐와 실행
+class CommandInvoker {
+    private val commandQueue = mutableListOf<Command>()
+    private val undoStack = mutableListOf<Command>()
+    
+    fun executeCommand(command: Command) {
+        commandQueue.add(command)
+        command.execute()
+        undoStack.add(command)
+    }
+    
+    fun processQueue() { // 수동 큐 처리
+        commandQueue.forEach { it.execute() }
+        commandQueue.clear()
+    }
+}
+```
+
+**핵심 특징:**
+- **명령 큐잉**: 명령을 큐에 저장 후 수동 실행
+- **Undo 지원**: 실행된 명령의 취소 기능
+- **수동 처리**: processQueue()로 명시적 큐 처리
+- **배치 실행**: 여러 명령을 한 번에 처리
+
+#### **Result007: Strategy Pattern**
+```kotlin
+// DataStrategy.kt - 런타임 전략 교체
+interface DataStrategy {
+    suspend fun loadItems(): List<Item>
+    val name: String
+    val description: String
+}
+
+class NetworkStrategy : DataStrategy {
+    override suspend fun loadItems(): List<Item> {
+        delay(3000) // 느린 네트워크
+        return generateNetworkItems()
+    }
+}
+
+class CacheStrategy : DataStrategy {
+    override suspend fun loadItems(): List<Item> {
+        delay(100) // 빠른 캐시
+        return generateCachedItems()
+    }
+}
+```
+
+**핵심 특징:**
+- **전략 교체**: 런타임에 데이터 로딩 전략 변경
+- **성능 특성**: Fast, Detailed, Network, Cache 등 다양한 전략
+- **수동 전환**: switchStrategy()로 명시적 전략 변경
+- **설정 가능**: UI에서 직접 전략 선택
+
+### Agent03: Reactive Programming 전문 (+2개)
+
+#### **Result006: Debounce/Throttle Pattern**
+```kotlin
+// DebounceViewModel.kt - 연산자 기반 초기화
+class DebounceViewModel : BaseViewModel() {
+    private val searchTrigger = MutableSharedFlow<String>()
+    private val refreshTrigger = MutableSharedFlow<Unit>()
+    
+    val searchResults = searchTrigger
+        .debounce(500) // 500ms 디바운스
+        .map { query -> performSearch(query) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    
+    val refreshResults = refreshTrigger
+        .sample(2000) // 2초 샘플링
+        .onEach { performRefresh() }
+    
+    // 수동 트리거
+    fun triggerSearch(query: String) {
+        searchTrigger.tryEmit(query)
+    }
+}
+```
+
+**핵심 특징:**
+- **Debounce 검색**: 500ms 지연 후 검색 실행
+- **Throttle 새로고침**: 2초 간격으로 새로고침 제한
+- **수동 트리거**: triggerSearch(), triggerRefresh() 함수
+- **배치 연산**: batchOperations로 여러 작업 묶음 처리
+
+#### **Result007: Switchable Source Pattern**
+```kotlin
+// DataSource.kt - 동적 소스 전환
+interface DataSource {
+    val name: String
+    fun itemsFlow(): Flow<List<Item>>
+}
+
+class NetworkDataSource : DataSource {
+    override fun itemsFlow(): Flow<List<Item>> = flow {
+        while (true) {
+            emit(fetchFromNetwork())
+            delay(5000)
+        }
+    }
+}
+
+class WebSocketDataSource : DataSource {
+    override fun itemsFlow(): Flow<List<Item>> = callbackFlow {
+        // WebSocket 연결 시뮬레이션
+        connectWebSocket { items -> trySend(items) }
+    }
+}
+```
+
+**핵심 특징:**
+- **동적 전환**: 런타임에 데이터 소스 교체
+- **다양한 소스**: Cache, Network, Database, WebSocket, Hybrid
+- **수동 전환**: switchToSource()로 명시적 소스 변경
+- **실시간성**: WebSocket 시뮬레이션으로 실시간 데이터
+
+### Agent04: Compose State 전문 (+2개)
+
+#### **Result006: LaunchedEffect Pattern**
+```kotlin
+// LaunchedEffectViewModel.kt - Composable 중심 초기화
+class LaunchedEffectViewModel : BaseViewModel() {
+    fun initialize(trigger: String) { // 파라미터 기반 초기화
+        viewModelScope.launch {
+            // 초기화 로직
+        }
+    }
+}
+
+@Composable
+fun Screen() {
+    val viewModel: LaunchedEffectViewModel = viewModel()
+    
+    // LaunchedEffect로 초기화
+    LaunchedEffect(Unit) {
+        viewModel.initialize("default")
+    }
+    
+    // 조건부 초기화
+    LaunchedEffect(someCondition) {
+        if (shouldReinitialize) {
+            viewModel.initialize("conditional")
+        }
+    }
+}
+```
+
+**핵심 특징:**
+- **Composable 중심**: LaunchedEffect에서 초기화 제어
+- **키 기반 트리거**: LaunchedEffect 키로 재초기화 조건 설정
+- **파라미터 초기화**: initialize(trigger) 함수로 다양한 초기화
+- **조건부 실행**: 상태에 따른 조건부 초기화
+
+#### **Result007: produceState Pattern**
+```kotlin
+// ProduceStateViewModel.kt - produceState로 상태 생성
+@Composable
+fun Screen() {
+    val config by remember { mutableStateOf(StateConfig()) }
+    
+    val itemsState by produceState<List<Item>>(
+        initialValue = emptyList(),
+        key1 = config.source,
+        key2 = config.refreshInterval
+    ) {
+        while (true) {
+            value = loadItemsFromSource(config.source)
+            delay(config.refreshInterval)
+        }
+    }
+    
+    val statusState by produceState<String>(
+        initialValue = "Initializing",
+        key1 = itemsState.size
+    ) {
+        value = when {
+            itemsState.isEmpty() -> "No items"
+            itemsState.size < 5 -> "Few items"
+            else -> "Many items"
+        }
+    }
+}
+```
+
+**핵심 특징:**
+- **Native State**: produceState로 Compose 네이티브 상태 생성
+- **키 반응성**: key 변경 시 자동 재생성
+- **여러 상태**: 독립적인 여러 produceState 조합
+- **설정 기반**: StateConfig로 동적 설정 변경
+
+### Agent05: Hybrid Approach 전문 (+2개)
+
+#### **Result006: Lazy Repository Pattern**
+```kotlin
+// Repository.kt - 지연 초기화 Repository
+class LazyItemRepository : ItemRepository {
+    private var isInitialized = false
+    
+    override suspend fun getItems(): List<Item> {
+        if (!isInitialized) {
+            initialize() // 첫 호출 시 초기화
+            isInitialized = true
+        }
+        return performGetItems()
+    }
+    
+    private suspend fun initialize() {
+        // 실제 초기화 로직
+        setupDatabase()
+        preloadCache()
+    }
+}
+
+class RepositorySwitcher {
+    fun createRepository(type: RepositoryType): ItemRepository {
+        return when (type) {
+            RepositoryType.LAZY -> LazyItemRepository()
+            RepositoryType.CACHE -> CacheBackedRepository()
+            RepositoryType.DATABASE -> DatabaseRepository()
+        }
+    }
+}
+```
+
+**핵심 특징:**
+- **지연 생성**: 첫 사용 시점에 Repository 초기화
+- **동적 전환**: 런타임에 Repository 타입 변경
+- **성능 최적화**: 필요한 시점까지 리소스 사용 지연
+- **타입별 구현**: Lazy, Cache, Database 등 다양한 Repository
+
+#### **Result007: Provider Pattern**
+```kotlin
+// Provider.kt - 의존성 제공자 패턴
+class DependencyProvider {
+    private val services = mutableMapOf<String, Any>()
+    
+    fun <T> provide(key: String, factory: () -> T): T {
+        return services.getOrPut(key) { factory() } as T
+    }
+    
+    fun configure(preset: ProviderPreset) { // 수동 설정
+        when (preset) {
+            ProviderPreset.DEVELOPMENT -> setupDevelopment()
+            ProviderPreset.PRODUCTION -> setupProduction()
+            ProviderPreset.TESTING -> setupTesting()
+        }
+    }
+}
+
+class ProviderViewModel : BaseViewModel() {
+    private val provider = DependencyProvider()
+    
+    fun initializeWithPreset(preset: ProviderPreset) { // 수동 초기화
+        provider.configure(preset)
+        loadDependencies()
+    }
+}
+```
+
+**핵심 특징:**
+- **제공자 패턴**: 필요한 의존성을 동적으로 제공
+- **프리셋 지원**: Development, Production, Testing 환경별 설정
+- **수동 설정**: configure()로 명시적 의존성 설정
+- **지연 생성**: 실제 사용 시점에 서비스 생성
+
+## 🔄 init{} 없는 패턴의 장점
+
+### 1. **명시적 제어**
+- 초기화 시점을 개발자가 직접 제어
+- 조건부 초기화 및 재초기화 가능
+- 테스트에서 초기화 과정 mock 용이
+
+### 2. **지연 초기화**
+- 필요한 시점까지 리소스 사용 지연
+- 앱 시작 시간 단축
+- 메모리 사용량 최적화
+
+### 3. **유연한 구성**
+- 런타임에 초기화 전략 변경
+- 다양한 초기화 파라미터 지원
+- 동적 설정 및 환경별 초기화
+
+### 4. **테스트 용이성**
+- 초기화 로직을 외부에서 제어
+- 단위 테스트에서 초기화 과정 검증
+- Mock 및 Fake 구현 용이
+
+## 📊 총 구현체 현황
+
+| Agent | 기존 구현체 | init{} 없는 추가 | 총 구현체 |
+|-------|-------------|------------------|-----------|
+| Agent01 | 5개 | 2개 | 7개 |
+| Agent02 | 5개 | 2개 | 7개 |
+| Agent03 | 5개 | 2개 | 7개 |
+| Agent04 | 5개 | 2개 | 7개 |
+| Agent05 | 5개 | 2개 | 7개 |
+| **총계** | **25개** | **10개** | **35개** |
+
+## 🎯 init{} 없는 패턴 사용 가이드
+
+### 언제 사용하면 좋을까?
+
+#### ✅ **사용 권장 상황**
+- **테스트 중심 개발**: 초기화 과정을 세밀하게 제어해야 할 때
+- **조건부 초기화**: 사용자 입력이나 외부 조건에 따라 초기화할 때
+- **성능 최적화**: 앱 시작 시간을 줄이고 싶을 때
+- **동적 설정**: 런타임에 초기화 전략을 바꿔야 할 때
+
+#### ⚠️ **주의 사항**
+- 초기화를 깜빡할 가능성
+- 코드 복잡성 증가
+- 개발자의 명시적 관리 필요
+
+### 추천 선택 가이드
+
+| 상황 | 추천 패턴 | 이유 |
+|------|-----------|------|
+| 단순한 지연 로딩 | Lazy Initialization | 가장 간단하고 직관적 |
+| 복잡한 생성 로직 | Factory Method | 조건에 따른 유연한 생성 |
+| 명령 기록/취소 | Command Pattern | 작업 이력 관리 용이 |
+| 성능 최적화 | Strategy Pattern | 상황별 최적 전략 선택 |
+| 실시간 검색 | Debounce/Throttle | 불필요한 API 호출 방지 |
+| Compose 중심 | LaunchedEffect | Compose 생명주기와 연동 |
+| 설정 기반 앱 | Provider Pattern | 환경별 의존성 관리 |
+
+---
+
+**35개의 다양한 패턴**으로 Android Compose에서 가능한 거의 모든 상태 관리 접근법을 다뤘습니다. 각각의 장단점을 이해하고 프로젝트 상황에 맞는 최적의 패턴을 선택하세요!
+
 더 자세한 분석이나 특정 패턴에 대한 추가 설명이 필요하시면 언제든 말씀해 주세요!

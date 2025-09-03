@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,53 +44,66 @@ class ActorModelViewModel : BaseViewModel() {
         data class SetItems(val items: List<Item>) : ActorMessage()
     }
     
-    // State management actor
-    private val stateActor = viewModelScope.actor<ActorMessage>(capacity = Channel.UNLIMITED) {
-        var currentItems = emptyList<Item>()
-        var isLoading = false
-        var currentError: String? = null
-        
-        for (message in channel) {
-            when (message) {
-                is ActorMessage.SetItems -> {
-                    currentItems = message.items
-                    _itemsFlow.value = currentItems
-                }
-                is ActorMessage.SetLoading -> {
-                    isLoading = message.isLoading
-                    _isLoadingFlow.value = isLoading
-                }
-                is ActorMessage.SetError -> {
-                    currentError = message.error
-                    _errorFlow.value = currentError
-                }
-                is ActorMessage.InitialLoad -> {
-                    // Delegate to operation actor
-                    operationActor.send(ActorMessage.InitialLoad)
-                }
-                is ActorMessage.Refresh -> {
-                    operationActor.send(ActorMessage.Refresh)
-                }
-                is ActorMessage.AddItem -> {
-                    operationActor.send(ActorMessage.AddItem(message.item))
-                }
-                is ActorMessage.RemoveItem -> {
-                    operationActor.send(ActorMessage.RemoveItem(message.itemId))
-                }
-                is ActorMessage.UpdateItem -> {
-                    operationActor.send(ActorMessage.UpdateItem(message.item))
+    // State management using channels
+    private val stateChannel = Channel<ActorMessage>(Channel.UNLIMITED)
+    private val operationChannel = Channel<ActorMessage>(Channel.UNLIMITED)
+    
+    init {
+        initializeActors()
+        initializeOperationProcessor()
+        setupNotificationHandler()
+        triggerInitialLoad()
+    }
+    
+    private fun initializeActors() {
+        // State management coroutine
+        viewModelScope.launch {
+            var currentItems = emptyList<Item>()
+            var isLoading = false
+            var currentError: String? = null
+            
+            for (message in stateChannel) {
+                when (message) {
+                    is ActorMessage.SetItems -> {
+                        currentItems = message.items
+                        _itemsFlow.value = currentItems
+                    }
+                    is ActorMessage.SetLoading -> {
+                        isLoading = message.isLoading
+                        _isLoadingFlow.value = isLoading
+                    }
+                    is ActorMessage.SetError -> {
+                        currentError = message.error
+                        _errorFlow.value = currentError
+                    }
+                    is ActorMessage.InitialLoad -> {
+                        operationChannel.send(ActorMessage.InitialLoad)
+                    }
+                    is ActorMessage.Refresh -> {
+                        operationChannel.send(ActorMessage.Refresh)
+                    }
+                    is ActorMessage.AddItem -> {
+                        operationChannel.send(ActorMessage.AddItem(message.item))
+                    }
+                    is ActorMessage.RemoveItem -> {
+                        operationChannel.send(ActorMessage.RemoveItem(message.itemId))
+                    }
+                    is ActorMessage.UpdateItem -> {
+                        operationChannel.send(ActorMessage.UpdateItem(message.item))
+                    }
                 }
             }
         }
     }
     
-    // Operation processing actor
-    private val operationActor = viewModelScope.actor<ActorMessage>(capacity = Channel.UNLIMITED) {
-        for (message in channel) {
-            try {
-                // Set loading state
-                stateActor.send(ActorMessage.SetLoading(true))
-                stateActor.send(ActorMessage.SetError(null))
+    private fun initializeOperationProcessor() {
+        // Operation processing coroutine
+        viewModelScope.launch {
+            for (message in operationChannel) {
+                try {
+                    // Set loading state
+                    stateChannel.send(ActorMessage.SetLoading(true))
+                    stateChannel.send(ActorMessage.SetError(null))
                 
                 when (message) {
                     is ActorMessage.InitialLoad -> {
@@ -99,7 +112,7 @@ class ActorModelViewModel : BaseViewModel() {
                             throw Exception("Initial load failed")
                         }
                         val items = generateInitialItems()
-                        stateActor.send(ActorMessage.SetItems(items))
+                        stateChannel.send(ActorMessage.SetItems(items))
                         updateScreenStateAfterInitialLoad(null)
                     }
                     is ActorMessage.Refresh -> {
@@ -108,7 +121,7 @@ class ActorModelViewModel : BaseViewModel() {
                             throw Exception("Refresh failed")
                         }
                         val items = generateInitialItems()
-                        stateActor.send(ActorMessage.SetItems(items))
+                        stateChannel.send(ActorMessage.SetItems(items))
                     }
                     is ActorMessage.AddItem -> {
                         delay(200) // Simulate operation delay
@@ -117,7 +130,7 @@ class ActorModelViewModel : BaseViewModel() {
                         }
                         val currentItems = _itemsFlow.value.toMutableList()
                         currentItems.add(message.item)
-                        stateActor.send(ActorMessage.SetItems(currentItems))
+                        stateChannel.send(ActorMessage.SetItems(currentItems))
                     }
                     is ActorMessage.RemoveItem -> {
                         delay(200) // Simulate operation delay
@@ -126,7 +139,7 @@ class ActorModelViewModel : BaseViewModel() {
                         }
                         val currentItems = _itemsFlow.value.toMutableList()
                         currentItems.removeAll { it.id == message.itemId }
-                        stateActor.send(ActorMessage.SetItems(currentItems))
+                        stateChannel.send(ActorMessage.SetItems(currentItems))
                     }
                     is ActorMessage.UpdateItem -> {
                         delay(200) // Simulate operation delay
@@ -138,17 +151,17 @@ class ActorModelViewModel : BaseViewModel() {
                         if (index >= 0) {
                             currentItems[index] = message.item
                         }
-                        stateActor.send(ActorMessage.SetItems(currentItems))
+                        stateChannel.send(ActorMessage.SetItems(currentItems))
                     }
                     else -> { /* Other messages handled by state actor */ }
                 }
                 
                 // Clear loading state
-                stateActor.send(ActorMessage.SetLoading(false))
+                stateChannel.send(ActorMessage.SetLoading(false))
                 
             } catch (e: Exception) {
-                stateActor.send(ActorMessage.SetError(e.message))
-                stateActor.send(ActorMessage.SetLoading(false))
+                stateChannel.send(ActorMessage.SetError(e.message))
+                stateChannel.send(ActorMessage.SetLoading(false))
                 
                 // Handle initial load failure
                 if (message is ActorMessage.InitialLoad) {
@@ -157,15 +170,11 @@ class ActorModelViewModel : BaseViewModel() {
             }
         }
     }
+    }
     
     // Notification channels for inter-actor communication
     private val notificationChannel = Channel<String>(capacity = Channel.UNLIMITED)
     val notifications = notificationChannel.receiveAsFlow()
-    
-    init {
-        setupNotificationHandler()
-        triggerInitialLoad()
-    }
     
     private fun setupNotificationHandler() {
         viewModelScope.launch {
@@ -178,7 +187,7 @@ class ActorModelViewModel : BaseViewModel() {
     
     private fun triggerInitialLoad() {
         viewModelScope.launch {
-            stateActor.send(ActorMessage.InitialLoad)
+            stateChannel.send(ActorMessage.InitialLoad)
         }
     }
     
@@ -194,7 +203,7 @@ class ActorModelViewModel : BaseViewModel() {
     
     fun refresh() {
         viewModelScope.launch {
-            stateActor.send(ActorMessage.Refresh)
+            stateChannel.send(ActorMessage.Refresh)
             notificationChannel.send("Refresh requested")
         }
     }
@@ -202,14 +211,14 @@ class ActorModelViewModel : BaseViewModel() {
     fun addItem() {
         viewModelScope.launch {
             val newItem = generateNewItem(_itemsFlow.value.size)
-            stateActor.send(ActorMessage.AddItem(newItem))
+            stateChannel.send(ActorMessage.AddItem(newItem))
             notificationChannel.send("Add item: ${newItem.id}")
         }
     }
     
     fun removeItem(itemId: String) {
         viewModelScope.launch {
-            stateActor.send(ActorMessage.RemoveItem(itemId))
+            stateChannel.send(ActorMessage.RemoveItem(itemId))
             notificationChannel.send("Remove item: $itemId")
         }
     }
@@ -220,15 +229,15 @@ class ActorModelViewModel : BaseViewModel() {
                 title = "${item.title} (Updated)",
                 timestamp = System.currentTimeMillis()
             )
-            stateActor.send(ActorMessage.UpdateItem(updatedItem))
+            stateChannel.send(ActorMessage.UpdateItem(updatedItem))
             notificationChannel.send("Update item: ${item.id}")
         }
     }
     
     override fun onCleared() {
         super.onCleared()
-        stateActor.close()
-        operationActor.close()
+        stateChannel.close()
+        operationChannel.close()
         notificationChannel.close()
     }
 }

@@ -126,7 +126,7 @@ fun MvpScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Failed to initialize: ${screenUiState.error}")
+                        Text("Failed to initialize: ${(screenUiState as ScreenUiState.Failed).error}")
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { presenter.loadItems() }) {
                             Text("Retry")

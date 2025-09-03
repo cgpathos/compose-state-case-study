@@ -36,7 +36,7 @@ fun Agent04Result005Screen() {
         }
         is ScreenUiState.Failed -> {
             ErrorContent(
-                error = screenState.error,
+                error = (screenState as ScreenUiState.Failed).error,
                 onRetry = {
                     screenState = ScreenUiState.Initializing
                 }
