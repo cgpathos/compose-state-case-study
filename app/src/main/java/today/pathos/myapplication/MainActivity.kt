@@ -4,19 +4,37 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import today.pathos.myapplication.ui.theme.MyApplicationTheme
 import today.pathos.myapplication.study.StudyHomeScreen
+import today.pathos.myapplication.study.agent01.result001.Screen as Agent01Result001Screen
+import today.pathos.myapplication.study.agent01.result002.Screen as Agent01Result002Screen
+import today.pathos.myapplication.study.agent01.result003.Screen as Agent01Result003Screen
+import today.pathos.myapplication.study.agent01.result004.Screen as Agent01Result004Screen
+import today.pathos.myapplication.study.agent01.result005.Screen as Agent01Result005Screen
+import today.pathos.myapplication.study.agent01.result006.Screen as Agent01Result006Screen
+import today.pathos.myapplication.study.agent01.result007.Screen as Agent01Result007Screen
+import today.pathos.myapplication.study.agent02.result001.MviScreen
+import today.pathos.myapplication.study.agent02.result002.MvpScreen
+import today.pathos.myapplication.study.agent02.result003.CleanArchScreen
+import today.pathos.myapplication.study.agent02.result004.ReduxScreen
+import today.pathos.myapplication.study.agent02.result005.UdfScreen
+import today.pathos.myapplication.study.agent03.result001.FlowChainScreen
+import today.pathos.myapplication.study.agent03.result002.RxJavaScreen
+import today.pathos.myapplication.study.agent03.result003.ActorModelScreen
+import today.pathos.myapplication.study.agent03.result004.CombineFlowsScreen
+import today.pathos.myapplication.study.agent03.result005.HotColdStreamScreen
+import today.pathos.myapplication.study.agent04.result001.Agent04Result001Screen
+import today.pathos.myapplication.study.agent04.result002.Agent04Result002Screen
+import today.pathos.myapplication.study.agent04.result003.Agent04Result003Screen
+import today.pathos.myapplication.study.agent04.result004.Agent04Result004Screen
+import today.pathos.myapplication.study.agent04.result005.Agent04Result005Screen
+
 /*
 TODO : PRD
 ScreenComposable + ViewModel 다양한 방식의 구현
@@ -37,46 +55,92 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                val navController = rememberNavController()
+                Scaffold(
+
+                ) { paddingValues ->
+                    NavHost(
+                        navController = navController,
+                        startDestination = "home",
+                        modifier = Modifier.padding(paddingValues)
                     ) {
-                        Text(
-                            text = "🎉 ComposeState CaseStudy",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
+                        composable("home") {
+                            StudyHomeScreen(navController)
+                        }
+
+                        // Agent01 routes
+                        composable("agent01_result001") {
+                            Agent01Result001Screen()
+                        }
+                        composable("agent01_result002") {
+                            Agent01Result002Screen()
+                        }
+                        composable("agent01_result003") {
+                            Agent01Result003Screen()
+                        }
+                        composable("agent01_result004") {
+                            Agent01Result004Screen()
+                        }
+                        composable("agent01_result005") {
+                            Agent01Result005Screen()
+                        }
+                        composable("agent01_result006") {
+                            Agent01Result006Screen()
+                        }
+                        composable("agent01_result007") {
+                            Agent01Result007Screen()
+                        }
                         
-                        Text(
-                            text = "35개의 구현체가 성공적으로 생성되었습니다!",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        // Agent02 routes
+                        composable("agent02_result001") {
+                            MviScreen()
+                        }
+                        composable("agent02_result002") {
+                            MvpScreen()
+                        }
+                        composable("agent02_result003") {
+                            CleanArchScreen()
+                        }
+                        composable("agent02_result004") {
+                            ReduxScreen()
+                        }
+                        composable("agent02_result005") {
+                            UdfScreen()
+                        }
                         
-                        Text(
-                            text = "• 기존 25개 구현체 (각 Agent별 5개)",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                        // Agent03 routes
+                        composable("agent03_result001") {
+                            FlowChainScreen()
+                        }
+                        composable("agent03_result002") {
+                            RxJavaScreen()
+                        }
+                        composable("agent03_result003") {
+                            ActorModelScreen()
+                        }
+                        composable("agent03_result004") {
+                            CombineFlowsScreen()
+                        }
+                        composable("agent03_result005") {
+                            HotColdStreamScreen()
+                        }
                         
-                        Text(
-                            text = "• 추가 10개 구현체 (init{} 블록 없는 패턴)",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                        
-                        Text(
-                            text = "Android Compose 상태 관리의 다양한 방식을 학습할 수 있는 종합적인 케이스 스터디입니다.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 32.dp)
-                        )
+                        // Agent04 routes
+                        composable("agent04_result001") {
+                            Agent04Result001Screen()
+                        }
+                        composable("agent04_result002") {
+                            Agent04Result002Screen()
+                        }
+                        composable("agent04_result003") {
+                            Agent04Result003Screen()
+                        }
+                        composable("agent04_result004") {
+                            Agent04Result004Screen()
+                        }
+                        composable("agent04_result005") {
+                            Agent04Result005Screen()
+                        }
                     }
                 }
             }

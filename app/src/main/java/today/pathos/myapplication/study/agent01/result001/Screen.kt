@@ -26,6 +26,9 @@ fun Screen(
 ) {
     val screenUiState by viewModel.screenUiState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    
+    // Store uiState in local variable for smart casting
+    val currentUiState = uiState
 
     Column(
         modifier = Modifier
@@ -110,7 +113,7 @@ fun Screen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Content based on UI state
-                when (uiState) {
+                when (currentUiState) {
                     is UiState.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -138,7 +141,7 @@ fun Screen(
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Text(
-                                    text = (uiState as UiState.Error).message,
+                                    text = currentUiState.message,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -152,7 +155,7 @@ fun Screen(
                     }
 
                     is UiState.Success -> {
-                        if ((uiState as UiState.Success).items.isEmpty()) {
+                        if (currentUiState.items.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -164,7 +167,7 @@ fun Screen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(
-                                    items = (uiState as UiState.Success).items,
+                                    items = currentUiState.items,
                                     key = { it.id }
                                 ) { item ->
                                     ItemCard(
